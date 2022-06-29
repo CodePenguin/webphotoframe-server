@@ -6,4 +6,33 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PhotoFrameSourceFiles Include="../PhotoFrame/src/**" />
+    <PhotoFrameDistFiles Include="../PhotoFrame/dist/**" />
+  </ItemGroup>
+  
+  <Target Name="YarnInstall" Inputs="../PhotoFrame/package.json" Outputs="../PhotoFrame/node_modules/.install-stamp">
+    <Exec Command="yarn install" WorkingDirectory="../PhotoFrame" />
+    <Touch Files="../PhotoFrame/node_modules/.install-stamp" AlwaysCreate="true" />
+  </Target>
+  <Target Name="YarnRunBuild" DependsOnTargets="YarnInstall" BeforeTargets="BeforeBuild" Inputs="@(PhotoFrameSourceFiles)" Outputs="../PhotoFrame/dist/index.html">
+    <Exec Command="yarn exec vite build" WorkingDirectory="../PhotoFrame" />
+  </Target>
+
+  <Target Name="CopyDistFilesToOutput" AfterTargets="Build">
+    <Copy SourceFiles="@(PhotoFrameDistFiles)" DestinationFolder="$(OutDir)\wwwroot" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PublishDistFiles" AfterTargets="ComputeFilesToPublish">
+    <Exec Command="yarn install" WorkingDirectory="../PhotoFrame" />
+    <Exec Command="yarn build" WorkingDirectory="../PhotoFrame" />
+    <ItemGroup>
+      <PhotoFrameDistFiles Include="../PhotoFrame/dist/**" />
+      <ResolvedFileToPublish Include="@(PhotoFrameDistFiles-&gt;'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
