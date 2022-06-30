@@ -1,3 +1,9 @@
+using PhotoFrameServer.Extensions;
+using Serilog;
+
+var applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoFrameServer");
+Directory.CreateDirectory(applicationDataPath);
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
@@ -5,21 +11,24 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = "wwwroot"
 });
 
-// Add services to the container.
+// Logging Configuration
+builder.Logging.ClearProviders();
+var logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File(Path.Combine(applicationDataPath, "PhotoFrameServer.log"))
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+builder.Logging.AddSerilog(logger);
 
-builder.Services.AddControllersWithViews();
+builder.AddPhotoFrameDbContext(applicationDataPath);
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-}
+app.Logger.LogInformation("Application Data Path: {ApplicationDataPath}", applicationDataPath);
 
 app.UseStaticFiles();
 app.UseRouting();
-
 app.MapFallbackToFile("index.html");
-
+app.MapPhotoFrameEndpoints();
+app.ExecuteDatabaseMigrations();
 app.Run();
 

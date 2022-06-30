@@ -11,6 +11,21 @@
     <PhotoFrameDistFiles Include="../PhotoFrame/dist/**" />
   </ItemGroup>
   
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoFrameServer.Data\PhotoFrameServer.Data.csproj">
+      <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
+    </ProjectReference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.6">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
   <Target Name="YarnInstall" Inputs="../PhotoFrame/package.json" Outputs="../PhotoFrame/node_modules/.install-stamp">
     <Exec Command="yarn install" WorkingDirectory="../PhotoFrame" />
     <Touch Files="../PhotoFrame/node_modules/.install-stamp" AlwaysCreate="true" />
