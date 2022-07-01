@@ -43,7 +43,7 @@
     <Exec Command="yarn build" WorkingDirectory="../PhotoFrame" />
     <ItemGroup>
       <PhotoFrameDistFiles Include="../PhotoFrame/dist/**" />
-      <ResolvedFileToPublish Include="@(PhotoFrameDistFiles-&gt;'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+      <ResolvedFileToPublish Include="@(PhotoFrameDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
         <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
