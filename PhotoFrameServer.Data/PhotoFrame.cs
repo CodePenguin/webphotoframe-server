@@ -2,8 +2,8 @@
 
 public class PhotoFrame
 {
-    public Guid PhotoFrameId { get; set; }
-    public List<Photo> Photos { get; set; }
+    public string PhotoFrameId { get; set; } = null!;
+    public List<Photo> Photos { get; set; } = new();
 
     public PhotoFrame()
     {

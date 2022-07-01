@@ -17,6 +17,7 @@ public static class EndpointRouteBuilderExtensions
 
     public static IEndpointRouteBuilder MapPhotoFrameEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        // Default Photo Frame Endpoints
         endpoints.MapGet("/photoframe.config.json", async (PhotoFrameContext db) =>
             await db.PhotoFrames.Include(f => f.Photos).FirstOrDefaultAsync() is PhotoFrame photoFrame
                 ? Results.Json(photoFrame.ToViewModel())
@@ -24,8 +25,23 @@ public static class EndpointRouteBuilderExtensions
            .Produces<PhotoFrameModel>(StatusCodes.Status200OK)
            .Produces(StatusCodes.Status404NotFound);
 
-        endpoints.MapGet("/photos/{id}", async (Guid id, PhotoFrameContext db) =>
-            await db.Photos.FindAsync(id) is Photo photo
+        endpoints.MapGet("/photos/{photoId}", async (Guid photoId, PhotoFrameContext db) =>
+            await db.Photos.FindAsync(photoId) is Photo photo
+                ? Results.File(photo.FileContents, contentType: GetMimeType(photo.FileExtension))
+                : Results.NotFound())
+           .Produces<PhotoModel>(StatusCodes.Status200OK)
+           .Produces(StatusCodes.Status404NotFound);
+
+        // Named Photo Frame Endpoints
+        endpoints.MapGet("{photoFrameId}/photoframe.config.json", async (string photoFrameId, PhotoFrameContext db) =>
+            await db.PhotoFrames.Include(f => f.Photos).FirstOrDefaultAsync(f => f.PhotoFrameId == photoFrameId) is PhotoFrame photoFrame
+                ? Results.Json(photoFrame.ToViewModel())
+                : Results.NotFound())
+           .Produces<PhotoFrameModel>(StatusCodes.Status200OK)
+           .Produces(StatusCodes.Status404NotFound);
+
+        endpoints.MapGet("{photoFrameId}/photos/{photoId}", async (string photoFrameId, Guid photoId, PhotoFrameContext db) =>
+            await db.Photos.FindAsync(photoId) is Photo photo
                 ? Results.File(photo.FileContents, contentType: GetMimeType(photo.FileExtension))
                 : Results.NotFound())
            .Produces<PhotoModel>(StatusCodes.Status200OK)
