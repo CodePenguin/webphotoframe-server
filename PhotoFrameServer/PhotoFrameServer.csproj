@@ -12,9 +12,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\PhotoFrameServer.Data\PhotoFrameServer.Data.csproj">
-      <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
-    </ProjectReference>
+    <ProjectReference Include="..\PhotoFrameServer.Data\PhotoFrameServer.Data.csproj" />
+    <ProjectReference Include="..\PhotoFrameServer.Core\PhotoFrameServer.Core.csproj" />
+    <ProjectReference Include="..\PhotoFrameServer.FileSystemProvider\PhotoFrameServer.FileSystemProvider.csproj" />
   </ItemGroup>
   
   <ItemGroup>
@@ -22,6 +22,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.4.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>

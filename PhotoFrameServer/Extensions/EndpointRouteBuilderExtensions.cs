@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using PhotoFrameServer.Data;
+using PhotoFrameServer.Services;
+using PhotoFrameServer.ViewModels;
 
 namespace PhotoFrameServer.Extensions;
 
@@ -23,27 +24,35 @@ public static class EndpointRouteBuilderExtensions
     public static IEndpointRouteBuilder MapPhotoFrameEndpoints(this IEndpointRouteBuilder endpoints)
     {
         // Default Photo Frame Endpoints
-        endpoints.MapGet("/photoframe.config.json", async (PhotoFrameContext db) =>
-            await db.PhotoFrames.Include(f => f.Photos).FirstOrDefaultAsync() is PhotoFrame photoFrame
-                ? Results.Json(photoFrame.ToViewModel())
-                : Results.NotFound());
+        endpoints.MapGet("/photoframe.config.json", async (PhotoFrameRequestHandler handler) =>
+            ServePhotoFrame(await handler.GetDefaultPhotoFrameAsync()));
 
-        endpoints.MapGet("/photos/{photoId}", async (Guid photoId, PhotoFrameContext db) =>
-            await db.Photos.FindAsync(photoId) is Photo photo
-                ? Results.File(photo.FileContents, contentType: GetMimeType(photo.FileExtension))
-                : Results.NotFound());
+        endpoints.MapGet("/photos/{photoId}", async (Guid photoId, PhotoFrameRequestHandler handler) =>
+            ServePhoto(await handler.GetPhotoAsync(photoId)));
 
         // Named Photo Frame Endpoints
-        endpoints.MapGet("{photoFrameId}/photoframe.config.json", async (string photoFrameId, PhotoFrameContext db) =>
-            await db.PhotoFrames.Include(f => f.Photos).FirstOrDefaultAsync(f => f.PhotoFrameId == photoFrameId) is PhotoFrame photoFrame
-                ? Results.Json(photoFrame.ToViewModel())
-                : Results.NotFound());
+        endpoints.MapGet("{photoFrameId}/photoframe.config.json", async (string photoFrameId, PhotoFrameRequestHandler handler) =>
+            ServePhotoFrame(await handler.GetPhotoFrameAsync(photoFrameId)));
 
-        endpoints.MapGet("{photoFrameId}/photos/{photoId}", async (string photoFrameId, Guid photoId, PhotoFrameContext db) =>
-            await db.Photos.FindAsync(photoId) is Photo photo
-                ? Results.File(photo.FileContents, contentType: GetMimeType(photo.FileExtension))
-                : Results.NotFound());
+        endpoints.MapGet("{photoFrameId}/photos/{photoId}", async (string photoFrameId, Guid photoId, PhotoFrameRequestHandler handler) =>
+            ServePhoto(await handler.GetPhotoAsync(photoId)));
 
         return endpoints;
+    }
+
+    private static IResult ServePhotoFrame(PhotoFrameModel? photoFrame)
+    {
+        return photoFrame is not null
+            ? Results.Json(photoFrame)
+            : Results.NotFound();
+    }
+
+    private static IResult ServePhoto(Photo? photo)
+    {
+        if (photo is null)
+        {
+            return Results.NotFound();
+        }
+        return Results.File(photo.FileContents, contentType: GetMimeType(photo.FileExtension));
     }
 }

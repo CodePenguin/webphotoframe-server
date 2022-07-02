@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoFrameServer", "PhotoFr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoFrameServer.Data", "PhotoFrameServer.Data\PhotoFrameServer.Data.csproj", "{3B197AD5-5116-4072-ABC7-0F0F4FC9DB85}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoFrameServer.Core", "PhotoFrameServer.Core\PhotoFrameServer.Core.csproj", "{605C0BF1-0476-4FEC-8E59-A16FD6B8D2DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoFrameServer.FileSystemProvider", "PhotoFrameServer.FileSystemProvider\PhotoFrameServer.FileSystemProvider.csproj", "{DD4B23E3-537C-4120-901A-3018DA5C4CD7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{3B197AD5-5116-4072-ABC7-0F0F4FC9DB85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3B197AD5-5116-4072-ABC7-0F0F4FC9DB85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3B197AD5-5116-4072-ABC7-0F0F4FC9DB85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{605C0BF1-0476-4FEC-8E59-A16FD6B8D2DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{605C0BF1-0476-4FEC-8E59-A16FD6B8D2DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{605C0BF1-0476-4FEC-8E59-A16FD6B8D2DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{605C0BF1-0476-4FEC-8E59-A16FD6B8D2DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD4B23E3-537C-4120-901A-3018DA5C4CD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD4B23E3-537C-4120-901A-3018DA5C4CD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD4B23E3-537C-4120-901A-3018DA5C4CD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD4B23E3-537C-4120-901A-3018DA5C4CD7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

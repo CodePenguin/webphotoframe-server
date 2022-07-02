@@ -12,4 +12,3 @@ public static class WebApplicationExtensions
         dataContext.Database.Migrate();
     }
 }
-

@@ -2,7 +2,7 @@
 
 public class PhotoFrame
 {
-    public string PhotoFrameId { get; set; } = null!;
+    public string Id { get; set; } = null!;
     public List<Photo> Photos { get; set; } = new();
 
     public PhotoFrame()
