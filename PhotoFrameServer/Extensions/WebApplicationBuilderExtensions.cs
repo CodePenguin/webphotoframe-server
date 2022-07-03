@@ -44,4 +44,13 @@ public static class WebApplicationBuilderExtensions
             options.WaitForJobsToComplete = true;
         });
     }
+
+    public static void AddPhotoProviders(this WebApplicationBuilder builder)
+    {
+        var photoProviderService = new PhotoProviderService();
+        builder.Services.AddSingleton(photoProviderService);
+
+        builder.Services.AddScoped(typeof(FileSystemProvider));
+        photoProviderService.RegisterProviderType(typeof(FileSystemProvider));
+    }
 }

@@ -24,6 +24,7 @@ builder.Logging.AddSerilog(logger);
 // Service Configuration
 builder.AddPhotoFrameDbContext(applicationDataPath);
 builder.AddPhotoFrameServices();
+builder.AddPhotoProviders();
 
 // Initialize application
 var app = builder.Build();

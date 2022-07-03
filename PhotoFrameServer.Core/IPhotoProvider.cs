@@ -2,5 +2,6 @@
 
 public interface IPhotoProvider
 {
-    public IEnumerable<IPhoto> GetPhotos(IPhotoProviderConfiguration configuration, int limit);
+    public void Initialize(IPhotoProviderContext context);
+    public IEnumerable<IPhoto> GetPhotos(int photoLimit);
 }

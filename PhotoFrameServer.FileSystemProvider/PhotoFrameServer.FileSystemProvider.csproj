@@ -10,6 +10,6 @@
     <ProjectReference Include="..\PhotoFrameServer.Core\PhotoFrameServer.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
   </ItemGroup>
 </Project>
