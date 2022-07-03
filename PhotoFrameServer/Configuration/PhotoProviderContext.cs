@@ -4,10 +4,26 @@ namespace PhotoFrameServer.Configuration;
 
 public class PhotoProviderContext : IPhotoProviderContext
 {
-    public ObjectDictionary Data { get; set; } = new();
-    public ObjectDictionary Settings { get; set; } = new();
+    private string _data = string.Empty;
 
-    IObjectDictionary IPhotoProviderContext.Data => Data;
-    IReadOnlyObjectDictionary IPhotoProviderContext.Settings => Settings;
+    public string Data
+    {
+        get => _data;
+        set
+        {
+            _data = value;
+            Modified = true;
+        }
+    }
+    public bool Modified { get; private set; } = false;
+    public Dictionary<string, object> Settings { get; private set; }
+
+    public PhotoProviderContext (string data, Dictionary<string, object> settings)
+    {
+        _data = data;
+        Settings = settings;
+    }
+
+    IReadOnlyDictionary<string, object> IPhotoProviderContext.Settings => Settings;
 }
 

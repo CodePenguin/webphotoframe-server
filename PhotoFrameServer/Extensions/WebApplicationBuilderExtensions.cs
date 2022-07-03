@@ -19,7 +19,6 @@ public static class WebApplicationBuilderExtensions
     public static void AddPhotoFrameServices(this WebApplicationBuilder builder)
     {
         builder.Services.Configure<PhotoFramesSettings>(builder.Configuration.GetSection(PhotoFramesSettings.Key));
-        builder.Services.AddScoped<PhotoProviderInstanceService>();
         builder.Services.AddScoped<PhotoFrameRequestHandler>();
 
         builder.Services.AddQuartz(q =>

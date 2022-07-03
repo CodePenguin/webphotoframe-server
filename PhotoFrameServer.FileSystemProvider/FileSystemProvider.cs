@@ -14,37 +14,34 @@ public class FileSystemProviderData
     public string TestString { get; set; } = string.Empty;
 }
 
-public class FileSystemProvider : IPhotoProvider
+public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
 {
-    private readonly ILogger<FileSystemProvider> _logger;
-    private IPhotoProviderContext? _context;
-    private FileSystemProviderSettings _settings = new();
-
-    public FileSystemProvider(ILogger<FileSystemProvider> logger)
+    public FileSystemProvider(ILogger<FileSystemProvider> logger) : base(logger)
     {
-        _logger = logger;
     }
 
-    public IEnumerable<IPhoto> GetPhotos(int photoLimit)
+    public override IEnumerable<IPhoto> GetPhotos(int photoLimit)
     {
-        throw new NotImplementedException();
-    }
+        var settings = Context.GetSettings<FileSystemProviderSettings>();
+        var data = Context.GetData<FileSystemProviderData>();
 
-    public void Initialize(IPhotoProviderContext context)
-    {
-        _context = context;
-        _settings = context.Settings.Get<FileSystemProviderSettings>();
-        _logger.LogDebug("Initialized with path: {Path}", _context?.Settings["Path"]);
-        _logger.LogDebug("Initialized with path2: {Path}", _settings.Path);
-
-        var data = context.Data.Get<FileSystemProviderData>();
-        _logger.LogDebug("Initialized with Data.TestInt: {Value}", data.TestInt);
-        _logger.LogDebug("Initialized with Data.TestString: {Value}", data.TestString);
+        var path = Context.Settings.TryGetValue("Path", out var temp) ? temp : string.Empty;
+        Logger.LogDebug("Initialized with path: {Path}", path);
+        Logger.LogDebug("Initialized with path2: {Path}", settings.Path);
+        Logger.LogDebug("Initialized with Data.TestInt: {Value}", data.TestInt);
+        Logger.LogDebug("Initialized with Data.TestString: {Value}", data.TestString);
 
         data.TestInt = DateTime.Now.Millisecond;
         data.TestString = DateTime.Now.ToString();
 
-        context.Data.Set(data);
+        Context.SetData(data);
+
+        return new List<IPhoto>();
+    }
+
+    public override void Initialize(IPhotoProviderContext context)
+    {
+        base.Initialize(context);
     }
 }
 

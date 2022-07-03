@@ -2,6 +2,6 @@
 
 public interface IPhotoProviderContext
 {
-    public IObjectDictionary Data { get; }
-    public IReadOnlyObjectDictionary Settings { get; }
+    public string Data { get; set; }
+    public IReadOnlyDictionary<string, object> Settings { get; }
 }
