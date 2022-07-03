@@ -14,25 +14,23 @@ public class ObjectDictionary : Dictionary<string, object>, IObjectDictionary, I
     {
     }
 
-    string[] IObjectDictionary.Keys => Keys.ToArray();
     object? IObjectDictionary.this[string key]
     {
         get => TryGetValue(key, out var value) ? value : null;
         set
         {
-            if (TryGetValue(key, out var originalValue) && originalValue != value)
-            {
-                return;
-            }
             if (value is null)
             {
-                Remove(key);
+                if (Remove(key))
+                {
+                    Modified = true;
+                };
             }
-            else
+            else if (!TryGetValue(key, out var originalValue) || !value.Equals(originalValue))
             {
                 this[key] = value;
+                Modified = true;
             }
-            Modified = true;
         }
     }
 

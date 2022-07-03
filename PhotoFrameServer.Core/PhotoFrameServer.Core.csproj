@@ -6,7 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Microsoft.Extensions.Configuration.Abstractions" />
-  </ItemGroup>
 </Project>

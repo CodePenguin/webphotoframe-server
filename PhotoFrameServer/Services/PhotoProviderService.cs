@@ -21,8 +21,9 @@ public class PhotoProviderService
             : null;
     }
 
-    public void RegisterProviderType(Type providerType)
+    public void RegisterProviderType<T>()
     {
+        var providerType = typeof(T);
         if (!typeof(IPhotoProvider).IsAssignableFrom(providerType))
         {
             return;

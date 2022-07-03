@@ -1,9 +1,8 @@
 ﻿namespace PhotoFrameServer.Core
 {
-    public interface IObjectDictionary
+    public interface IObjectDictionary : IReadOnlyObjectDictionary
     {
-        public string[] Keys { get; }
-        public object? this[string key] { get; set; }
+        public new object? this[string key] { get; set; }
     }
 }
 

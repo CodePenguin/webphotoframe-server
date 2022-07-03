@@ -8,10 +8,10 @@ namespace PhotoFrameServer.Services;
 
 public class PhotoFrameRequestHandler
 {
-    private readonly PhotoFrameContext _db;
+    private readonly PhotoFrameDbContext _db;
     private readonly PhotoFramesSettings _settings;
 
-    public PhotoFrameRequestHandler(PhotoFrameContext db, IOptionsSnapshot<PhotoFramesSettings> settingsSnapshot)
+    public PhotoFrameRequestHandler(PhotoFrameDbContext db, IOptionsSnapshot<PhotoFramesSettings> settingsSnapshot)
     {
         _db = db;
         _settings = settingsSnapshot.Value; 

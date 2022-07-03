@@ -10,7 +10,7 @@ public static class WebApplicationBuilderExtensions
 {
     public static void AddPhotoFrameDbContext(this WebApplicationBuilder builder, string applicationDataPath)
     {
-        builder.Services.AddDbContext<PhotoFrameContext>(options => {
+        builder.Services.AddDbContext<PhotoFrameDbContext>(options => {
             var databaseFilename = Path.Combine(applicationDataPath, "PhotoFrameServer.db");
             options.UseSqlite($"Data Source={databaseFilename}", builder => builder.MigrationsAssembly("PhotoFrameServer"));
         });
@@ -19,7 +19,7 @@ public static class WebApplicationBuilderExtensions
     public static void AddPhotoFrameServices(this WebApplicationBuilder builder)
     {
         builder.Services.Configure<PhotoFramesSettings>(builder.Configuration.GetSection(PhotoFramesSettings.Key));
-
+        builder.Services.AddScoped<PhotoProviderInstanceService>();
         builder.Services.AddScoped<PhotoFrameRequestHandler>();
 
         builder.Services.AddQuartz(q =>
@@ -50,7 +50,7 @@ public static class WebApplicationBuilderExtensions
         var photoProviderService = new PhotoProviderService();
         builder.Services.AddSingleton(photoProviderService);
 
-        builder.Services.AddScoped(typeof(FileSystemProvider));
-        photoProviderService.RegisterProviderType(typeof(FileSystemProvider));
+        builder.Services.AddScoped<FileSystemProvider>();
+        photoProviderService.RegisterProviderType<FileSystemProvider>();
     }
 }
