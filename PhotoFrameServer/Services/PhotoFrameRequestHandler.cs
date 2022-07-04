@@ -49,8 +49,8 @@ public class PhotoFrameRequestHandler
 
         var model = new PhotoFrameModel
         {
-            ConfigRefreshIntervalSeconds = photoFrameConfiguration.ConfigRefreshIntervalSeconds,
-            PhotoSwitchIntervalSeconds = photoFrameConfiguration.PhotoSwitchIntervalSeconds
+            ConfigRefreshIntervalSeconds = photoFrameConfiguration.ConfigRefreshIntervalSeconds ?? _settings.DefaultConfigRefreshIntervalSeconds,
+            PhotoSwitchIntervalSeconds = photoFrameConfiguration.PhotoSwitchIntervalSeconds ?? _settings.DefaultPhotoSwitchIntervalSeconds
         };
 
         foreach (var slot in photoFrame.Slots)
