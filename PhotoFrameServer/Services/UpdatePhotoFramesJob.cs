@@ -29,48 +29,50 @@ public class UpdatePhotoFramesJob : IJob
         _db = db;
     }
 
-
     private void AddPhotosToPhotoFrame(string photoFrameId, IEnumerable<IPhotoMetadata> photosMetadata, IPhotoProvider provider)
     {
-        _logger.LogDebug("Adding {Count} photos to {PhotoFrameId}...", photoFrameId);
+        var photoFrame = _db.AddOrGetPhotoFrame(photoFrameId);
+        var addedCount = 0;
+        var totalCount = 0;
         foreach (var photoMetadata in photosMetadata)
         {
-            var fileContents = provider.GetPhotoContents(photoMetadata).ToArray();
-            var dataPhoto = new Photo
+            totalCount++;
+            var photo = _db.GetPhotoByExternalId(photoMetadata.ExternalId);
+            if (photo is not null && photoFrame.Slots.Any(p => p.PhotoId == photo.Id))
             {
-                ExternalId = photoMetadata.ExternalId,
-                FileContents = fileContents,
-                FileExtension = photoMetadata.FileExtension,
-                PhotoFrameId = photoFrameId
-            };
-            _db.Add(dataPhoto);
-        }
-    }
-
-    private void CheckPhotoFrame(string photoFrameId)
-    {
-        var photoFrame = _db.PhotoFrames.Find(photoFrameId);
-        if (photoFrame is not null)
-        {
-            return;
-        }
-        photoFrame = new PhotoFrame
-        {
-            Id = photoFrameId
-        };
-        _db.PhotoFrames.Add(photoFrame);
-    }
-
-    private void CleanupPhotoFrames(List<PhotoFrameConfiguration> photoFrames)
-    {
-        var knownPhotoFrameIds = new HashSet<string>(photoFrames.Select(p => p.Id));
-        foreach(var photoFrame in _db.PhotoFrames)
-        {
-            if (!knownPhotoFrameIds.Contains(photoFrame.Id))
-            {
-                _db.Remove(photoFrame);
+                continue;
             }
+            if (photo is null)
+            {
+                var fileContents = provider.GetPhotoContents(photoMetadata).ToArray();
+                photo = new Photo
+                {
+                    ExternalId = photoMetadata.ExternalId,
+                    FileContents = fileContents,
+                    FileExtension = photoMetadata.FileExtension
+                };
+                _db.Add(photo);
+            }
+            var slot = new PhotoFrameSlot
+            {
+                PhotoFrame = photoFrame,
+                Photo = photo
+            };
+            _db.Add(slot);
+            addedCount++;
         }
+        _logger.LogDebug("Added {AddedCount} or {TotalCount} photos to {PhotoFrameId}", addedCount, totalCount, photoFrameId);
+    }
+
+    private void CleanupPhotoFrames(List<PhotoFrameConfiguration> photoFrameConfigurations)
+    {
+        var knownPhotoFrameIds = new HashSet<string>(photoFrameConfigurations.Select(p => p.Id));
+        var unknownPhotoFrames = _db.PhotoFrames.Where(p => !knownPhotoFrameIds.Contains(p.Id));
+        foreach (var photoFrame in unknownPhotoFrames)
+        {
+            _logger.LogInformation("Removed data for unused photo frame {PhotoFrameId}.", photoFrame.Id);
+        }
+        _db.PhotoFrames.RemoveRange(unknownPhotoFrames);
     }
 
     private void DeinitializeProviderInstances(Dictionary<string, PhotoProviderInstanceData> providerInstances)
@@ -95,7 +97,6 @@ public class UpdatePhotoFramesJob : IJob
             foreach (var photoFrame in _settings.PhotoFrames)
             {
                 _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrame.Id);
-                CheckPhotoFrame(photoFrame.Id);
 
                 var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
                 foreach (var provider in photoFrame.Providers)

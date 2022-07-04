@@ -28,14 +28,14 @@ public static class EndpointRouteBuilderExtensions
             ServePhotoFrame(await handler.GetDefaultPhotoFrameAsync()));
 
         endpoints.MapGet("/photos/{photoId}", async (Guid photoId, PhotoFrameRequestHandler handler) =>
-            ServePhoto(await handler.GetPhotoAsync(photoId)));
+            ServePhoto(await handler.GetDefaultPhotoFramePhotoAsync(photoId)));
 
         // Named Photo Frame Endpoints
         endpoints.MapGet("{photoFrameId}/photoframe.config.json", async (string photoFrameId, PhotoFrameRequestHandler handler) =>
             ServePhotoFrame(await handler.GetPhotoFrameAsync(photoFrameId)));
 
         endpoints.MapGet("{photoFrameId}/photos/{photoId}", async (string photoFrameId, Guid photoId, PhotoFrameRequestHandler handler) =>
-            ServePhoto(await handler.GetPhotoAsync(photoId)));
+            ServePhoto(await handler.GetPhotoAsync(photoFrameId, photoId)));
 
         return endpoints;
     }

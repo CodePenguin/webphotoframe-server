@@ -7,9 +7,6 @@ public class Photo
     public string ExternalId { get; set; } = null!;
     public byte[] FileContents { get; set; } = null!;
     public string FileExtension { get; set; } = null!;
-    public string PhotoFrameId { get; set; } = null!;
-    public PhotoFrame PhotoFrame { get; set; } = null!;
-    public DateTime? ViewedDateTime { get; set; }
 
     public Photo()
     {

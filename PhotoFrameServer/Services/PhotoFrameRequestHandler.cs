@@ -17,52 +17,65 @@ public class PhotoFrameRequestHandler
         _settings = settingsSnapshot.Value; 
     }
 
+    private PhotoFrameConfiguration? GetDefaultPhotoFrameConfiguration()
+    {
+        return _settings.PhotoFrames.OrderBy(p => p.Id).FirstOrDefault();
+    }
+
     public async Task<PhotoFrameModel?> GetDefaultPhotoFrameAsync()
     {
-        var photoFrameSettings = _settings.PhotoFrames.FirstOrDefault();
-        return photoFrameSettings is not null
-            ? await GetPhotoFrameAsync(photoFrameSettings.Id)
+        var photoFrameConfiguration = GetDefaultPhotoFrameConfiguration();
+        return photoFrameConfiguration is not null
+            ? await GetPhotoFrameAsync(photoFrameConfiguration.Id)
             : null;
     }
 
-    public async Task<PhotoFrameModel?> GetPhotoFrameAsync(string id)
+    public async Task<Photo?> GetDefaultPhotoFramePhotoAsync(Guid photoId)
     {
-        var photoFrameSettings = _settings.PhotoFrames.SingleOrDefault(f => f.Id == id);
-        var photoFrame = await _db.PhotoFrames.Include(f => f.Photos).SingleOrDefaultAsync(f => f.Id == id);
-        if (photoFrameSettings is null || photoFrame is null)
+        var photoFrameConfiguration = GetDefaultPhotoFrameConfiguration();
+        return photoFrameConfiguration is not null
+            ? await GetPhotoAsync(photoFrameConfiguration.Id, photoId)
+            : null;
+    }
+
+    public async Task<PhotoFrameModel?> GetPhotoFrameAsync(string photoFrameId)
+    {
+        var photoFrameConfiguration = _settings.PhotoFrames.SingleOrDefault(f => f.Id == photoFrameId);
+        var photoFrame = await _db.PhotoFrames.Include(f => f.Slots).ThenInclude(s => s.Photo).SingleOrDefaultAsync(f => f.Id == photoFrameId);
+        if (photoFrameConfiguration is null || photoFrame is null)
         {
             return null;
         }
 
         var model = new PhotoFrameModel
         {
-            ConfigRefreshIntervalSeconds = photoFrameSettings.ConfigRefreshIntervalSeconds,
-            PhotoSwitchIntervalSeconds = photoFrameSettings.PhotoSwitchIntervalSeconds
+            ConfigRefreshIntervalSeconds = photoFrameConfiguration.ConfigRefreshIntervalSeconds,
+            PhotoSwitchIntervalSeconds = photoFrameConfiguration.PhotoSwitchIntervalSeconds
         };
 
-        foreach (var photo in photoFrame.Photos)
+        foreach (var slot in photoFrame.Slots)
         {
             model.Photos.Add(new PhotoModel
             {
-                Caption = photo.Caption,
-                Url = $"photos/{photo.Id}"
+                Caption = slot.Photo.Caption,
+                Url = $"photos/{slot.Photo.Id}"
             });
         }
         return model;
     }
 
-    public async Task<Photo?> GetPhotoAsync(Guid id)
+    public async Task<Photo?> GetPhotoAsync(string photoFrameId, Guid photoId)
     {
-        var photo = await _db.Photos.FindAsync(id);
-        if (photo is null)
+        var slot = await _db.PhotoFrameSlots.Include(s => s.Photo).SingleOrDefaultAsync(s => s.PhotoFrameId == photoFrameId && s.PhotoId == photoId);
+        if (slot is null || slot.Photo is null)
         {
             return null;
         }
-        if (photo.ViewedDateTime is null)
+        if (slot.ViewedDateTime is null)
         {
-            photo.ViewedDateTime = DateTime.Now;
+            slot.ViewedDateTime = DateTime.Now;
             _db.SaveChanges();
         }
-        return photo;
+        return slot.Photo;
     }
 }
