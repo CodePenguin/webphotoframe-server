@@ -35,13 +35,13 @@ public class UpdatePhotoFramesJob : IJob
         _logger.LogDebug("Adding {Count} photos to {PhotoFrameId}...", photoFrameId);
         foreach (var photo in photos)
         {
-            var dbPhoto = new Photo
+            var dataPhoto = new Data.Photo
             {
                 PhotoFrameId = photoFrameId,
                 FileContents = photo.FileContents,
                 FileExtension = photo.FileExtension
             };
-            _db.Add(dbPhoto);
+            _db.Add(dataPhoto);
         }
     }
 
@@ -49,26 +49,39 @@ public class UpdatePhotoFramesJob : IJob
     public Task Execute(IJobExecutionContext context)
     {
         _logger.LogDebug("Updating Photo Frames...");
-
-        foreach (var photoFrame in _settings.PhotoFrames)
+        try
         {
-            _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrame.Id);
-
-            var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
-            foreach (var provider in photoFrame.Providers)
+            foreach (var photoFrame in _settings.PhotoFrames)
             {
-                if (GetPhotoProviderInstanceData(providerInstances, photoFrame.Id, provider) is not PhotoProviderInstanceData providerData)
+                _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrame.Id);
+
+                var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
+                foreach (var provider in photoFrame.Providers)
                 {
-                    continue;
+                    try
+                    {
+                        if (GetPhotoProviderInstanceData(providerInstances, photoFrame.Id, provider) is not PhotoProviderInstanceData providerData)
+                        {
+                            continue;
+                        }
+                        _logger.LogDebug("Requesting photos from {ProviderInstanceId} ({ProviderType})...", provider.Id, providerData.Instance.GetType());
+                        var photoLimit = 5;
+                        var photos = providerData.Instance.GetPhotos(photoLimit);
+                        AddPhotosToPhotoFrame(photoFrame.Id, photos);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Unhandled exception occurred for {ProviderInstanceId} ({ProviderType})", provider.Id, provider.ProviderType);
+                    }
                 }
-                _logger.LogDebug("Requesting photos from {ProviderInstanceId} ({ProviderType})...", provider.Id, providerData.Instance.GetType());
-                var photoLimit = 5;
-                var photos = providerData.Instance.GetPhotos(photoLimit);
-                AddPhotosToPhotoFrame(photoFrame.Id, photos);
+                SetPhotoProviderInstanceData(providerInstances);
             }
-            SetPhotoProviderInstanceData(providerInstances);
+            _db.SaveChanges();
         }
-        _db.SaveChanges();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception occurred while updating photo frames");
+        }
         return Task.CompletedTask;
     }
 

@@ -3,45 +3,57 @@ using Microsoft.Extensions.Logging;
 
 namespace PhotoFrameServer;
 
-public class FileSystemProviderSettings
-{
-    public string Path { get; set; } = string.Empty;
-}
-
-public class FileSystemProviderData
-{
-    public int TestInt { get; set; } = 0;
-    public string TestString { get; set; } = string.Empty;
-}
-
 public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
 {
+    private readonly Random _random = new();
+
     public FileSystemProvider(ILogger<FileSystemProvider> logger) : base(logger)
     {
     }
 
     public override IEnumerable<IPhoto> GetPhotos(int photoLimit)
     {
+        var output = new List<Photo>();
         var settings = Context.GetSettings<FileSystemProviderSettings>();
         var data = Context.GetData<FileSystemProviderData>();
 
-        var path = Context.Settings.TryGetValue("Path", out var temp) ? temp : string.Empty;
-        Logger.LogDebug("Initialized with path: {Path}", path);
-        Logger.LogDebug("Initialized with path2: {Path}", settings.Path);
-        Logger.LogDebug("Initialized with Data.TestInt: {Value}", data.TestInt);
-        Logger.LogDebug("Initialized with Data.TestString: {Value}", data.TestString);
+        if (string.IsNullOrWhiteSpace(settings.Path))
+        {
+            throw new ArgumentException("Path is required.");
+        }
+        var enumerationOptions = new EnumerationOptions
+        {
+            IgnoreInaccessible = true,
+            RecurseSubdirectories = settings.IncludeSubFolders
+        };
+        var photoFilenames = new List<string>();
+        foreach (var filename in Directory.EnumerateFiles(settings.Path, "*.*", enumerationOptions))
+        {
+            if (filename is null)
+            {
+                continue;
+            }
+            if (!PhotoProviderConstants.SupportedPhotoFileExtensions.Contains(Path.GetExtension(filename).ToLowerInvariant()))
+            {
+                continue;
+            }
+            var relativeFilename = Path.GetRelativePath(settings.Path, filename);
+            photoFilenames.Add(relativeFilename);
+        }
 
-        data.TestInt = DateTime.Now.Millisecond;
-        data.TestString = DateTime.Now.ToString();
+        while (output.Count < photoLimit && photoFilenames.Count > 0)
+        {
+            var index = _random.Next(0, photoFilenames.Count);
+            var fileContents = File.ReadAllBytes(Path.Combine(settings.Path, photoFilenames[index]));
+            var fileExtension = Path.GetExtension(photoFilenames[index]);
+            var photo = new Photo(fileContents, fileExtension);
+            output.Add(photo);
+            photoFilenames.RemoveAt(index);
+        }
 
         Context.SetData(data);
 
-        return new List<IPhoto>();
-    }
-
-    public override void Initialize(IPhotoProviderContext context)
-    {
-        base.Initialize(context);
+        return output;
     }
 }
 
