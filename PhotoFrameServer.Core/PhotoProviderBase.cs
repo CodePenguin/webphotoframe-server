@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace PhotoFrameServer.Core;
 
@@ -13,10 +15,23 @@ public abstract class PhotoProviderBase : IPhotoProvider
         Logger = logger;
     }
 
-    public abstract IEnumerable<IPhoto> GetPhotos(int photoLimit);
-
     public virtual void Initialize(IPhotoProviderContext context)
     {
         _context = context;
     }
+
+    public virtual void Deinitialize(IPhotoProviderContext context)
+    {
+        _context = null;
+    }
+
+    protected string GenerateExternalId(string data)
+    {
+        var dataBytes = Encoding.UTF8.GetBytes($"{GetType().FullName}:{data}");
+        using var sha256 = SHA1.Create();
+        return Convert.ToBase64String(sha256.ComputeHash(dataBytes));
+    }
+
+    public abstract IEnumerable<IPhotoMetadata> GetPhotos(int photoLimit);
+    public abstract IEnumerable<byte> GetPhotoContents(IPhotoMetadata photoMetaData);
 }

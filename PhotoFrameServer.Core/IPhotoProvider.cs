@@ -3,5 +3,8 @@
 public interface IPhotoProvider
 {
     public void Initialize(IPhotoProviderContext context);
-    public IEnumerable<IPhoto> GetPhotos(int photoLimit);
+    public void Deinitialize(IPhotoProviderContext context);
+
+    public IEnumerable<IPhotoMetadata> GetPhotos(int photoLimit);
+    public IEnumerable<byte>GetPhotoContents(IPhotoMetadata photoMetadata);
 }

@@ -30,21 +30,62 @@ public class UpdatePhotoFramesJob : IJob
     }
 
 
-    private void AddPhotosToPhotoFrame(string photoFrameId, IEnumerable<IPhoto> photos)
+    private void AddPhotosToPhotoFrame(string photoFrameId, IEnumerable<IPhotoMetadata> photosMetadata, IPhotoProvider provider)
     {
         _logger.LogDebug("Adding {Count} photos to {PhotoFrameId}...", photoFrameId);
-        foreach (var photo in photos)
+        foreach (var photoMetadata in photosMetadata)
         {
-            var dataPhoto = new Data.Photo
+            var fileContents = provider.GetPhotoContents(photoMetadata).ToArray();
+            var dataPhoto = new Photo
             {
-                PhotoFrameId = photoFrameId,
-                FileContents = photo.FileContents,
-                FileExtension = photo.FileExtension
+                ExternalId = photoMetadata.ExternalId,
+                FileContents = fileContents,
+                FileExtension = photoMetadata.FileExtension,
+                PhotoFrameId = photoFrameId
             };
             _db.Add(dataPhoto);
         }
     }
 
+    private void CheckPhotoFrame(string photoFrameId)
+    {
+        var photoFrame = _db.PhotoFrames.Find(photoFrameId);
+        if (photoFrame is not null)
+        {
+            return;
+        }
+        photoFrame = new PhotoFrame
+        {
+            Id = photoFrameId
+        };
+        _db.PhotoFrames.Add(photoFrame);
+    }
+
+    private void CleanupPhotoFrames(List<PhotoFrameConfiguration> photoFrames)
+    {
+        var knownPhotoFrameIds = new HashSet<string>(photoFrames.Select(p => p.Id));
+        foreach(var photoFrame in _db.PhotoFrames)
+        {
+            if (!knownPhotoFrameIds.Contains(photoFrame.Id))
+            {
+                _db.Remove(photoFrame);
+            }
+        }
+    }
+
+    private void DeinitializeProviderInstances(Dictionary<string, PhotoProviderInstanceData> providerInstances)
+    {
+        foreach (var providerInstanceId in providerInstances.Keys)
+        {
+            var data = providerInstances[providerInstanceId];
+            providerInstances.Remove(providerInstanceId);
+            data.Instance.Deinitialize(data.Context);
+            if (data.Context.Modified)
+            {
+                _db.SetPhotoProviderInstanceData(data.PhotoFrameId, providerInstanceId, data.Context.Data);
+            }
+        }
+    }
 
     public Task Execute(IJobExecutionContext context)
     {
@@ -54,6 +95,7 @@ public class UpdatePhotoFramesJob : IJob
             foreach (var photoFrame in _settings.PhotoFrames)
             {
                 _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrame.Id);
+                CheckPhotoFrame(photoFrame.Id);
 
                 var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
                 foreach (var provider in photoFrame.Providers)
@@ -67,15 +109,16 @@ public class UpdatePhotoFramesJob : IJob
                         _logger.LogDebug("Requesting photos from {ProviderInstanceId} ({ProviderType})...", provider.Id, providerData.Instance.GetType());
                         var photoLimit = 5;
                         var photos = providerData.Instance.GetPhotos(photoLimit);
-                        AddPhotosToPhotoFrame(photoFrame.Id, photos);
+                        AddPhotosToPhotoFrame(photoFrame.Id, photos, providerData.Instance);
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Unhandled exception occurred for {ProviderInstanceId} ({ProviderType})", provider.Id, provider.ProviderType);
                     }
                 }
-                SetPhotoProviderInstanceData(providerInstances);
+                DeinitializeProviderInstances(providerInstances);
             }
+            CleanupPhotoFrames(_settings.PhotoFrames);
             _db.SaveChanges();
         }
         catch (Exception ex)
@@ -115,18 +158,6 @@ public class UpdatePhotoFramesJob : IJob
 
         providerInstance.Initialize(context);
         return providerInstanceData;
-    }
-
-    private void SetPhotoProviderInstanceData(Dictionary<string, PhotoProviderInstanceData> providerInstances)
-    {
-        foreach(var (providerInstanceId, providerInstance) in providerInstances)
-        {
-            if (!providerInstance.Context.Modified)
-            {
-                continue;
-            }
-            _db.SetPhotoProviderInstanceData(providerInstance.PhotoFrameId, providerInstanceId, providerInstance.Context.Data);
-        }
     }
 
     private class PhotoProviderInstanceData

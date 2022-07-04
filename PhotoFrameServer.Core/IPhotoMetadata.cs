@@ -1,7 +1,7 @@
 ﻿namespace PhotoFrameServer.Core;
 
-public interface IPhoto
+public interface IPhotoMetadata
 {
-    public byte[] FileContents { get; }
+    public string ExternalId { get; }
     public string FileExtension { get; }
 }

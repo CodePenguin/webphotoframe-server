@@ -1,6 +1,6 @@
 ﻿namespace PhotoFrameServer;
 
-public class FileSystemProviderSettings
+internal class FileSystemProviderSettings
 {
     public bool IncludeSubFolders { get; set; } = true;
     public string Path { get; set; } = string.Empty;

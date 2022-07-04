@@ -6,16 +6,38 @@ namespace PhotoFrameServer;
 public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
 {
     private readonly Random _random = new();
+    private FileSystemProviderData? _data;
 
     public FileSystemProvider(ILogger<FileSystemProvider> logger) : base(logger)
     {
     }
 
-    public override IEnumerable<IPhoto> GetPhotos(int photoLimit)
+    public override void Initialize(IPhotoProviderContext context)
     {
-        var output = new List<Photo>();
+        base.Initialize(context);
+        _data = Context.GetData<FileSystemProviderData>();
+    }
+
+    public override void Deinitialize(IPhotoProviderContext context)
+    {
+        Context.SetData(_data!);
+        base.Deinitialize(context);
+    }
+
+
+    public override IEnumerable<byte> GetPhotoContents(IPhotoMetadata photoMetadata)
+    {
+        if (photoMetadata is not FileSystemProviderPhotoMetadata providerPhotoMetadata || !File.Exists(providerPhotoMetadata.Filename))
+        {
+            return Array.Empty<byte>();
+        }
+        return File.ReadAllBytes(providerPhotoMetadata.Filename);
+    }
+
+    public override IEnumerable<IPhotoMetadata> GetPhotos(int photoLimit)
+    {
+        var output = new List<IPhotoMetadata>();
         var settings = Context.GetSettings<FileSystemProviderSettings>();
-        var data = Context.GetData<FileSystemProviderData>();
 
         if (string.IsNullOrWhiteSpace(settings.Path))
         {
@@ -44,14 +66,12 @@ public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
         while (output.Count < photoLimit && photoFilenames.Count > 0)
         {
             var index = _random.Next(0, photoFilenames.Count);
-            var fileContents = File.ReadAllBytes(Path.Combine(settings.Path, photoFilenames[index]));
-            var fileExtension = Path.GetExtension(photoFilenames[index]);
-            var photo = new Photo(fileContents, fileExtension);
+            var filename = Path.Combine(settings.Path, photoFilenames[index]);
+            var externalId = GenerateExternalId(filename);
+            var photo = new FileSystemProviderPhotoMetadata(externalId, filename);
             output.Add(photo);
             photoFilenames.RemoveAt(index);
         }
-
-        Context.SetData(data);
 
         return output;
     }
