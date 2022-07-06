@@ -18,7 +18,14 @@ public static class IPhotoProviderContextExtensions
             var property = objType.GetProperty(pair.Key);
             if (property is not null)
             {
-                property.SetValue(obj, pair.Value, null);
+                if (property.PropertyType == typeof(bool))
+                {
+                    property.SetValue(obj, Convert.ToBoolean(pair.Value), null);
+                }
+                else
+                {
+                    property.SetValue(obj, pair.Value, null);
+                }
             }
         }
         return obj;
