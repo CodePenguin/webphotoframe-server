@@ -75,6 +75,10 @@ public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
             {
                 index = _random.Next(0, photoFilenames.Count);
             }
+            else if (index >= photoFilenames.Count)
+            {
+                index = 0;
+            }
             var filename = photoFilenames[index];
             var externalId = GenerateExternalId(filename);
             var photo = new FileSystemProviderPhotoMetadata(externalId, filename);

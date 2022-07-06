@@ -52,7 +52,7 @@ public class PhotoFrameDbContext : DbContext
         modelBuilder.Entity<Photo>()
             .HasAlternateKey(c => c.ExternalId);
         modelBuilder.Entity<PhotoFrameSlot>()
-            .HasKey(p => new { p.PhotoFrameId, p.PhotoId });
+            .HasAlternateKey(p => new { p.PhotoFrameId, p.PhotoId });
         modelBuilder.Entity<PhotoProviderInstance>()
             .HasKey(p => new { p.Id, p.PhotoFrameId });
     }

@@ -61,7 +61,7 @@ public class UpdatePhotoFramesJob : IJob
             _db.Add(slot);
             addedCount++;
         }
-        _logger.LogDebug("Added {AddedCount} or {TotalCount} photos to {PhotoFrameId}", addedCount, totalCount, photoFrameId);
+        _logger.LogDebug("Added {AddedCount} of {TotalCount} photos to {PhotoFrameId}", addedCount, totalCount, photoFrameId);
     }
 
     private void CleanupPhotoFrames(List<PhotoFrameConfiguration> photoFrameConfigurations)

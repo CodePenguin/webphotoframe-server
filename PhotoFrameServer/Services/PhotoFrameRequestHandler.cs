@@ -41,7 +41,10 @@ public class PhotoFrameRequestHandler
     public async Task<PhotoFrameModel?> GetPhotoFrameAsync(string photoFrameId)
     {
         var photoFrameConfiguration = _settings.PhotoFrames.SingleOrDefault(f => f.Id == photoFrameId);
-        var photoFrame = await _db.PhotoFrames.Include(f => f.Slots).ThenInclude(s => s.Photo).SingleOrDefaultAsync(f => f.Id == photoFrameId);
+        var photoFrame = await _db.PhotoFrames
+            .Include(f => f.Slots.OrderBy(s => s.Id))
+            .ThenInclude(s => s.Photo)
+            .SingleOrDefaultAsync(f => f.Id == photoFrameId);
         if (photoFrameConfiguration is null || photoFrame is null)
         {
             return null;
@@ -57,7 +60,6 @@ public class PhotoFrameRequestHandler
         {
             model.Photos.Add(new PhotoModel
             {
-                Caption = slot.Photo.Caption,
                 Url = $"photos/{slot.Photo.Id}"
             });
         }
