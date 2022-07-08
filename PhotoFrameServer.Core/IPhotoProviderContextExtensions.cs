@@ -36,4 +36,3 @@ public static class IPhotoProviderContextExtensions
         context.Data = JsonSerializer.Serialize(value);
     }
 }
-

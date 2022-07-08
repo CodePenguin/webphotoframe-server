@@ -29,9 +29,8 @@ public class UpdatePhotoFramesJob : IJob
         _db = db;
     }
 
-    private void AddPhotosToPhotoFrame(string photoFrameId, IEnumerable<IPhotoMetadata> photosMetadata, IPhotoProvider provider)
+    private void AddPhotosToPhotoFrame(PhotoFrame photoFrame, IEnumerable<IPhotoMetadata> photosMetadata, IPhotoProvider provider)
     {
-        var photoFrame = _db.AddOrGetPhotoFrame(photoFrameId);
         var addedCount = 0;
         var totalCount = 0;
         foreach (var photoMetadata in photosMetadata)
@@ -58,21 +57,35 @@ public class UpdatePhotoFramesJob : IJob
                 PhotoFrame = photoFrame,
                 Photo = photo
             };
-            _db.Add(slot);
+            photoFrame.Slots.Add(slot);
             addedCount++;
+
+            // Mark an expired slot as replaced if available
+            var slotToReplace = photoFrame.Slots.Where(s => s.ExpiredDateTime is not null && s.ReplacedDateTime is null).FirstOrDefault();
+            if (slotToReplace is not null)
+            {
+                slotToReplace.ReplacedDateTime = DateTime.Now;
+            }
         }
-        _logger.LogDebug("Added {AddedCount} of {TotalCount} photos to {PhotoFrameId}", addedCount, totalCount, photoFrameId);
+        _logger.LogDebug("Added {AddedCount} of {TotalCount} photos to {PhotoFrameId}", addedCount, totalCount, photoFrame.Id);
     }
 
-    private void CleanupPhotoFrames(List<PhotoFrameConfiguration> photoFrameConfigurations)
+    private void CleanupUnusedPhotoFrameData()
     {
-        var knownPhotoFrameIds = new HashSet<string>(photoFrameConfigurations.Select(p => p.Id));
+        var knownPhotoFrameIds = new HashSet<string>(_settings.PhotoFrames.Select(p => p.Id));
         var unknownPhotoFrames = _db.PhotoFrames.Where(p => !knownPhotoFrameIds.Contains(p.Id));
         foreach (var photoFrame in unknownPhotoFrames)
         {
             _logger.LogInformation("Removed data for unused photo frame {PhotoFrameId}.", photoFrame.Id);
         }
         _db.PhotoFrames.RemoveRange(unknownPhotoFrames);
+    }
+
+    private void CleanupReplacedPhotoFrameSlots(PhotoFrameConfiguration photoFrameConfiguration, PhotoFrame photoFrame)
+    {
+        var configRefreshIntervalSeconds = photoFrameConfiguration.ConfigRefreshIntervalSeconds ?? _settings.DefaultConfigRefreshIntervalSeconds;
+        var replacedSlots = photoFrame.Slots.Where(s => s.ReplacedDateTime?.AddSeconds(configRefreshIntervalSeconds) < DateTime.Now);
+        _db.PhotoFrameSlots.RemoveRange(replacedSlots);
     }
 
     private void DeinitializeProviderInstances(Dictionary<string, PhotoProviderInstanceData> providerInstances)
@@ -94,32 +107,11 @@ public class UpdatePhotoFramesJob : IJob
         _logger.LogDebug("Updating Photo Frames...");
         try
         {
-            foreach (var photoFrame in _settings.PhotoFrames)
+            CleanupUnusedPhotoFrameData();
+            foreach (var photoFrameConfiguration in _settings.PhotoFrames)
             {
-                _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrame.Id);
-
-                var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
-                foreach (var provider in photoFrame.Providers)
-                {
-                    try
-                    {
-                        if (GetPhotoProviderInstanceData(providerInstances, photoFrame.Id, provider) is not PhotoProviderInstanceData providerData)
-                        {
-                            continue;
-                        }
-                        _logger.LogDebug("Requesting photos from {ProviderInstanceId} ({ProviderType})...", provider.Id, providerData.Instance.GetType());
-                        var photoLimit = 5;
-                        var photos = providerData.Instance.GetPhotos(photoLimit);
-                        AddPhotosToPhotoFrame(photoFrame.Id, photos, providerData.Instance);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Unhandled exception occurred for {ProviderInstanceId} ({ProviderType})", provider.Id, provider.ProviderType);
-                    }
-                }
-                DeinitializeProviderInstances(providerInstances);
+                ProcessPhotoFrame(photoFrameConfiguration);
             }
-            CleanupPhotoFrames(_settings.PhotoFrames);
             _db.SaveChanges();
         }
         catch (Exception ex)
@@ -127,6 +119,42 @@ public class UpdatePhotoFramesJob : IJob
             _logger.LogError(ex, "Unhandled exception occurred while updating photo frames");
         }
         return Task.CompletedTask;
+    }
+
+    private void ProcessPhotoFrame(PhotoFrameConfiguration photoFrameConfiguration)
+    {
+        _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrameConfiguration.Id);
+
+        var maxSlotCount = photoFrameConfiguration.MaxPhotoFrameSlotCount ?? _settings.DefaultMaxPhotoFrameSlotCount;
+        var photoFrame = _db.AddOrGetPhotoFrame(photoFrameConfiguration.Id);
+
+        var expiredCount = MarkAndCountExpiredPhotoFrameSlots(photoFrameConfiguration, photoFrame);
+
+        var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
+        foreach (var provider in photoFrameConfiguration.Providers)
+        {
+            var photoLimit = Math.Max(0, maxSlotCount - (photoFrame.Slots.Count - expiredCount));
+            if (photoLimit <= 0)
+            {
+                break;
+            }
+            try
+            {
+                if (GetPhotoProviderInstanceData(providerInstances, photoFrameConfiguration.Id, provider) is not PhotoProviderInstanceData providerData)
+                {
+                    continue;
+                }
+                _logger.LogDebug("Requesting photos from {ProviderInstanceId} ({ProviderType})...", provider.Id, providerData.Instance.GetType());
+                var photos = providerData.Instance.GetPhotos(photoLimit);
+                AddPhotosToPhotoFrame(photoFrame, photos, providerData.Instance);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception occurred for {ProviderInstanceId} ({ProviderType})", provider.Id, provider.ProviderType);
+            }
+        }
+        DeinitializeProviderInstances(providerInstances);
+        CleanupReplacedPhotoFrameSlots(photoFrameConfiguration, photoFrame);
     }
 
     private PhotoProviderInstanceData? GetPhotoProviderInstanceData(Dictionary<string, PhotoProviderInstanceData> providerInstances, string photoFrameId, PhotoProviderConfiguration provider)
@@ -159,6 +187,32 @@ public class UpdatePhotoFramesJob : IJob
 
         providerInstance.Initialize(context);
         return providerInstanceData;
+    }
+
+    private int MarkAndCountExpiredPhotoFrameSlots(PhotoFrameConfiguration photoFrameConfiguration, PhotoFrame photoFrame)
+    {
+        var expirePhotoAfterFirstViewSeconds = photoFrameConfiguration.ExpirePhotoAfterFirstViewSeconds ?? _settings.DefaultExpirePhotoAfterFirstViewSeconds;
+        var expirePhotoAfterViewedCount = photoFrameConfiguration.ExpirePhotoAfterViewedCount ?? _settings.DefaultExpirePhotoAfterViewedCount;
+        var expiredCount = 0;
+        var nowDateTime = DateTime.Now;
+        foreach (var slot in photoFrame.Slots)
+        {
+            if (slot.ExpiredDateTime is not null && slot.ReplacedDateTime is not null)
+            {
+                expiredCount++;
+                continue;
+            }
+
+            var expiredByViewedDateTime = expirePhotoAfterFirstViewSeconds > 0 && slot.ViewedDateTime?.AddSeconds(expirePhotoAfterFirstViewSeconds) < nowDateTime;
+            var expiredByViewCount = expirePhotoAfterViewedCount > 0 && slot.ViewedCount >= expirePhotoAfterViewedCount;
+
+            if (expiredByViewedDateTime || expiredByViewCount)
+            {
+                slot.ExpiredDateTime = nowDateTime;
+                expiredCount++;
+            }
+        }
+        return expiredCount;
     }
 
     private class PhotoProviderInstanceData

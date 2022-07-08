@@ -14,7 +14,7 @@ public class PhotoFrameRequestHandler
     public PhotoFrameRequestHandler(PhotoFrameDbContext db, IOptionsSnapshot<PhotoFramesSettings> settingsSnapshot)
     {
         _db = db;
-        _settings = settingsSnapshot.Value; 
+        _settings = settingsSnapshot.Value;
     }
 
     private PhotoFrameConfiguration? GetDefaultPhotoFrameConfiguration()
@@ -58,6 +58,10 @@ public class PhotoFrameRequestHandler
 
         foreach (var slot in photoFrame.Slots)
         {
+            if (slot.ReplacedDateTime != null)
+            {
+                continue;
+            }
             model.Photos.Add(new PhotoModel
             {
                 Url = $"photos/{slot.Photo.Id}"
@@ -76,8 +80,9 @@ public class PhotoFrameRequestHandler
         if (slot.ViewedDateTime is null)
         {
             slot.ViewedDateTime = DateTime.Now;
-            _db.SaveChanges();
         }
+        slot.ViewedCount++;
+        _db.SaveChanges();
         return slot.Photo;
     }
 }
