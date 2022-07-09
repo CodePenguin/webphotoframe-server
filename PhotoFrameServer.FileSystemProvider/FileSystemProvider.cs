@@ -50,7 +50,9 @@ public class FileSystemProvider : PhotoProviderBase, IPhotoProvider
         var enumerationOptions = new EnumerationOptions
         {
             IgnoreInaccessible = true,
-            RecurseSubdirectories = _settings.IncludeSubFolders
+            MaxRecursionDepth = _settings.MaxSubFolderDepth,
+            RecurseSubdirectories = _settings.IncludeSubFolders,
+            ReturnSpecialDirectories = false
         };
 
         var photoFilenames = new List<string>();
