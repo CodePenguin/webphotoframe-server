@@ -123,6 +123,10 @@ public class UpdatePhotoFramesJob : IJob
 
     private void ProcessPhotoFrame(PhotoFrameConfiguration photoFrameConfiguration)
     {
+        if (!photoFrameConfiguration.Enabled)
+        {
+            return;
+        }
         _logger.LogDebug("Processing Photo Frame {PhotoFrameId}...", photoFrameConfiguration.Id);
 
         var maxSlotCount = photoFrameConfiguration.MaxPhotoFrameSlotCount ?? _settings.DefaultMaxPhotoFrameSlotCount;
@@ -133,6 +137,10 @@ public class UpdatePhotoFramesJob : IJob
         var providerInstances = new Dictionary<string, PhotoProviderInstanceData>();
         foreach (var provider in photoFrameConfiguration.Providers)
         {
+            if (!provider.Enabled)
+            {
+                continue;
+            }
             var photoLimit = Math.Max(0, maxSlotCount - (photoFrame.Slots.Count - expiredCount));
             if (photoLimit <= 0)
             {
