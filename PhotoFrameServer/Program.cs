@@ -1,8 +1,12 @@
 using PhotoFrameServer.Extensions;
+using PhotoFrameServer.Services;
 using Serilog;
 
 var applicationDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoFrameServer");
 Directory.CreateDirectory(applicationDataPath);
+
+var command = args.Length > 0 ? args[0].ToLower() : string.Empty;
+var isExecutingCommand = CommandService.IsHandledCommand(command);
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -22,8 +26,9 @@ var logger = new LoggerConfiguration()
 builder.Logging.AddSerilog(logger);
 
 // Service Configuration
+builder.AddCommandLineArguments(args);
 builder.AddPhotoFrameDbContext(applicationDataPath);
-builder.AddPhotoFrameServices();
+builder.AddPhotoFrameServices(isExecutingCommand);
 builder.AddPhotoProviders();
 
 // Initialize application
@@ -35,4 +40,12 @@ app.UseRouting();
 app.MapFallbackToFile("index.html");
 app.MapPhotoFrameEndpoints();
 app.ExecuteDatabaseMigrations();
-app.Run();
+
+try
+{
+    app.Run();
+}
+catch (TaskCanceledException)
+{
+    // Ignore because host application is stopping
+}

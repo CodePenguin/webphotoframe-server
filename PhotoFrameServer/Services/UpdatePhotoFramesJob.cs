@@ -9,11 +9,11 @@ namespace PhotoFrameServer.Services;
 [DisallowConcurrentExecution]
 public class UpdatePhotoFramesJob : IJob
 {
+    private readonly PhotoFrameDbContext _db;
     private readonly ILogger<UpdatePhotoFramesJob> _logger;
+    private readonly PhotoProviderService _photoProviderService;
     private readonly PhotoFramesSettings _settings;
     private readonly IServiceProvider _serviceProvider;
-    private readonly PhotoProviderService _photoProviderService;
-    private readonly PhotoFrameDbContext _db;
 
     public UpdatePhotoFramesJob(
         ILogger<UpdatePhotoFramesJob> logger,
@@ -172,20 +172,14 @@ public class UpdatePhotoFramesJob : IJob
             return providerInstanceData;
         }
 
-        _logger.LogDebug("Initializing new provider instance {ProviderId} ({ProviderType})...", provider.Id, provider.ProviderType);
-        var providerType = _photoProviderService.FindProviderType(provider.ProviderType);
-        if (providerType is null)
-        {
-            _logger.LogError("Invalid provider type: {ProviderType}", provider.ProviderType);
-            return null;
-        }
+        _logger.LogDebug("Initializing provider instance \"{ProviderId}\" of type \"{ProviderType})\"...", provider.Id, provider.ProviderType);
 
-        if (_serviceProvider.GetService(providerType) is not IPhotoProvider providerInstance)
+        var providerType = _photoProviderService.GetPhotoProviderType(provider.ProviderType);
+        if (providerType is null || _serviceProvider.GetService(providerType) is not IPhotoProvider providerInstance || providerInstance is null)
         {
-            _logger.LogError("Unable to create provider instance: {ProviderType}", provider.ProviderType);
+            _logger.LogError("Unable to create provider instance: {ProviderType}", providerType);
             return null;
         }
-        _logger.LogDebug("Initialized provider instance {ProviderId} ({ProviderType}).", provider.Id, providerInstance);
 
         var data = _db.GetPhotoProviderInstanceData(photoFrameId, provider.Id);
         var context = new PhotoProviderContext(data, provider.Settings);

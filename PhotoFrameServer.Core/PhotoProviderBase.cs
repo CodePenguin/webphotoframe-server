@@ -25,6 +25,11 @@ public abstract class PhotoProviderBase : IPhotoProvider
         _context = null;
     }
 
+    public virtual void Configure(string[] args)
+    {
+        // Override in descendent to provide extra configuration
+    }
+
     protected string GenerateExternalId(string data)
     {
         var dataBytes = Encoding.UTF8.GetBytes($"{GetType().FullName}:{data}");

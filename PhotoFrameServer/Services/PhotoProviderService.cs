@@ -1,4 +1,5 @@
-﻿using PhotoFrameServer.Core;
+﻿using PhotoFrameServer.Configuration;
+using PhotoFrameServer.Core;
 
 namespace PhotoFrameServer.Services;
 
@@ -6,11 +7,12 @@ public class PhotoProviderService
 {
     private Dictionary<string, Type> _providerTypes { get; } = new Dictionary<string, Type>();
 
-    public PhotoProviderService()
+    public PhotoProviderService(KnownPhotoProviderTypes knownProviderTypes)
     {
+        RegisterProviderTypes(knownProviderTypes);
     }
 
-    public Type? FindProviderType(string providerTypeName)
+    public Type? GetPhotoProviderType(string providerTypeName)
     {
         if (_providerTypes.TryGetValue(providerTypeName, out var providerType))
         {
@@ -21,9 +23,8 @@ public class PhotoProviderService
             : null;
     }
 
-    public void RegisterProviderType<T>()
+    private void RegisterProviderType(Type providerType)
     {
-        var providerType = typeof(T);
         if (!typeof(IPhotoProvider).IsAssignableFrom(providerType))
         {
             return;
@@ -34,5 +35,13 @@ public class PhotoProviderService
         }
         _providerTypes.TryAdd(providerType.FullName, providerType);
         _providerTypes.TryAdd(providerType.Name, providerType);
+    }
+
+    private void RegisterProviderTypes(KnownPhotoProviderTypes knownProviderTypes)
+    {
+        foreach(var providerType in knownProviderTypes)
+        {
+            RegisterProviderType(providerType);
+        }
     }
 }
